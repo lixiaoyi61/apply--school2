@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美国留学申请记录</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#eef1f5;--card:#fff;--border:#e5e7eb;--text:#1f2937;--muted:#6b7280}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+.wrap{max-width:1280px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+header h1{font-size:22px;font-weight:700}
+.subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;border:none;cursor:pointer;border-radius:8px;padding:8px 12px;background:#fff;border:1px solid var(--border);color:var(--text);transition:.15s;user-select:none}
+button:hover{background:#f3f4f6}
+button.danger:hover{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--muted)}
+.stat b{font-size:20px;color:var(--text);margin-right:2px}
+.stat.region{background:#111827;color:#fff;border-color:#111827;font-weight:700}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.board{grid-template-columns:1fr}}
+.column{background:#fff;border-radius:14px;border:1px solid var(--border);padding:12px;min-height:200px;display:flex;flex-direction:column}
+.column.reach{border-top:4px solid #e11d48}
+.column.match{border-top:4px solid #2563eb}
+.column.safety{border-top:4px solid #16a34a}
+.column-header{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 12px;border-bottom:2px solid #f1f3f5}
+.column-header .title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.reach .dot{background:#e11d48}
+.match .dot{background:#2563eb}
+.safety .dot{background:#16a34a}
+.column-header .count{font-size:12px;color:var(--muted);background:#f3f4f6;border-radius:999px;padding:2px 10px}
+.schools{display:flex;flex-direction:column;gap:10px;margin-top:12px;min-height:60px;flex:1}
+.schools.drag-over{outline:2px dashed #6366f1;outline-offset:4px;border-radius:10px}
+.school-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:.15s}
+.school-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.school-card.dragging{opacity:.4}
+.school-card.drag-over{border:2px dashed #6366f1}
+.school-head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.drag-handle{cursor:grab;color:#cbd5e1;user-select:none;font-size:14px}
+.school-name{flex:1;font-size:15px;font-weight:600;border:none;border-bottom:1px dashed transparent;padding:6px 4px;background:transparent;outline:none;min-width:0}
+.school-name:focus{border-bottom-color:#6366f1}
+.icon-btn{background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px 6px;border-radius:6px;line-height:1}
+.icon-btn:hover{background:#f3f4f6;color:#111827}
+.school-meta{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.school-meta label{font-size:12px;color:var(--muted);white-space:nowrap}
+select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6px;font:inherit;font-size:13px;background:#fff;min-width:0}
+.move-select{font-size:12px;border:1px solid var(--border);border-radius:8px;padding:5px;color:var(--muted);background:#fff;max-width:86px}
+.info-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.info-item{display:flex;gap:6px;align-items:center}
+.info-key{width:38%;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font:inherit;font-size:13px;background:#fafafa;min-width:0}
+.info-value{flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font:inherit;font-size:13px;min-width:0}
+.info-key:focus,.info-value:focus,.status:focus,.move-select:focus{outline:2px solid #6366f1;outline-offset:-1px}
+.add-info{width:100%;background:transparent;border:1px dashed var(--border);color:var(--muted);padding:6px;border-radius:8px;font-size:13px}
+.add-info:hover{background:#f9fafb;color:#111827}
+.add-school{width:100%;margin-top:10px;background:transparent;border:1px dashed var(--border);color:var(--muted);padding:10px;border-radius:10px;font-size:14px}
+.add-school:hover{background:#f9fafb;color:#111827;border-color:#c7cbd1}
+.empty{color:#9ca3af;font-size:13px;text-align:center;padding:14px 0}
+.uni-picker{position:absolute;z-index:1000;background:#fff;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);display:none;overflow:hidden;max-width:calc(100vw - 32px)}
+.uni-picker.open{display:block}
+.uni-picker-search{display:flex;gap:6px;padding:8px;border-bottom:1px solid #f1f3f5}
+.uni-picker-search input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit;font-size:13px;outline:none;min-width:0}
+.uni-picker-search input:focus{outline:2px solid #6366f1;outline-offset:-1px}
+.uni-picker-close{background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:0 10px;border-radius:6px}
+.uni-picker-close:hover{background:#f3f4f6}
+.uni-picker-list{max-height:320px;overflow-y:auto}
+.uni-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f7f8fa}
+.uni-item:hover{background:#f3f4f6}
+.uni-item .uni-rank{width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#111827;color:#fff;border-radius:6px;font-size:11px;font-weight:600}
+.uni-item .uni-name{flex:1;color:#1f2937;font-weight:500;min-width:0}
+.uni-item .uni-zh{color:var(--muted);font-size:12px;flex:none}
+.uni-picker-empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+.uni-picker-tabs{display:flex;gap:4px;padding:8px 8px 0}
+.uni-picker-tabs button{flex:1;border:none;background:#f3f4f6;padding:6px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--muted)}
+.uni-picker-tabs button.active{background:#111827;color:#fff}
+.head-left{display:flex;flex-direction:column;gap:10px}
+.region-switch{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px}
+.region-switch button{border:none;background:transparent;padding:6px 14px;border-radius:7px;font-size:13px;color:var(--muted);cursor:pointer}
+.region-switch button.active{background:#111827;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+    <div class="head-left">
+      <h1>🎓 留学申请记录</h1>
+      <div class="region-switch" id="regionSwitch">
+        <button data-region="us" class="active">🇺🇸 美国</button>
+        <button data-region="uk">🇬🇧 英国</button>
+        <button data-region="sg">🇸🇬 新加坡</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button id="exportBtn">⬇️ 导出数据</button>
+      <button id="importBtn">⬆️ 导入数据</button>
+      <button id="resetBtn" class="danger">🗑️ 清空全部</button>
+    </div>
+  </header>
+<div class="stats" id="stats"></div>
+  <main class="board">
+    <section class="column reach" data-category="reach">
+      <div class="column-header">
+        <div class="title"><span class="dot"></span>冲刺 Reach</div>
+        <span class="count" id="count-reach">0 所</span>
+      </div>
+      <div class="schools" id="schools-reach"></div>
+      <button class="add-school" data-add="reach">＋ 添加学校</button>
+    </section>
+    <section class="column match" data-category="match">
+      <div class="column-header">
+        <div class="title"><span class="dot"></span>稳妥 Match</div>
+        <span class="count" id="count-match">0 所</span>
+      </div>
+      <div class="schools" id="schools-match"></div>
+      <button class="add-school" data-add="match">＋ 添加学校</button>
+    </section>
+    <section class="column safety" data-category="safety">
+      <div class="column-header">
+        <div class="title"><span class="dot"></span>保底 Safety</div>
+        <span class="count" id="count-safety">0 所</span>
+      </div>
+      <div class="schools" id="schools-safety"></div>
+      <button class="add-school" data-add="safety">＋ 添加学校</button>
+    </section>
+  </main>
+</div>
+<input type="file" id="fileInput" accept="application/json" hidden>
+<script>
+const CATEGORIES = ['reach', 'match', 'safety'];
+const CATEGORY_LABELS = { reach: '冲刺', match: '稳妥', safety: '保底' };
+const STATUS_OPTIONS = ['未开始', '准备中', '已提交', '面试中', '等待名单', '已录取', '被拒绝'];
+const DEFAULT_INFO = [
+  { key: '截止日期', value: '' },
+  { key: '申请链接', value: '' },
+  { key: '备注', value: '' }
+];
+const STORAGE_KEY = 'us_apply_schools_data';
+
+// 各地区院校库（支持搜索选择，含中文名）
+const REGIONS = { us: '美国', uk: '英国', sg: '新加坡' };
+const REGION_FLAGS = { us: '🇺🇸', uk: '🇬🇧', sg: '🇸🇬' };
+const SCHOOLS = {
+  us: [
+    { en: 'Princeton University', zh: '普林斯顿大学' },
+    { en: 'Massachusetts Institute of Technology', zh: '麻省理工学院' },
+    { en: 'Harvard University', zh: '哈佛大学' },
+    { en: 'Stanford University', zh: '斯坦福大学' },
+    { en: 'Yale University', zh: '耶鲁大学' },
+    { en: 'California Institute of Technology', zh: '加州理工学院' },
+    { en: 'Duke University', zh: '杜克大学' },
+    { en: 'Johns Hopkins University', zh: '约翰斯·霍普金斯大学' },
+    { en: 'Northwestern University', zh: '西北大学' },
+    { en: 'University of Pennsylvania', zh: '宾夕法尼亚大学' },
+    { en: 'Cornell University', zh: '康奈尔大学' },
+    { en: 'University of Chicago', zh: '芝加哥大学' },
+    { en: 'Brown University', zh: '布朗大学' },
+    { en: 'Columbia University', zh: '哥伦比亚大学' },
+    { en: 'Dartmouth College', zh: '达特茅斯学院' },
+    { en: 'University of California, Los Angeles', zh: '加州大学洛杉矶分校' },
+    { en: 'University of California, Berkeley', zh: '加州大学伯克利分校' },
+    { en: 'Rice University', zh: '莱斯大学' },
+    { en: 'University of Notre Dame', zh: '圣母大学' },
+    { en: 'Vanderbilt University', zh: '范德堡大学' },
+    { en: 'Carnegie Mellon University', zh: '卡内基梅隆大学' },
+    { en: 'University of Michigan, Ann Arbor', zh: '密歇根大学安娜堡分校' },
+    { en: 'Washington University in St. Louis', zh: '圣路易斯华盛顿大学' },
+    { en: 'Emory University', zh: '埃默里大学' },
+    { en: 'Georgetown University', zh: '乔治城大学' },
+    { en: 'University of Virginia', zh: '弗吉尼亚大学' },
+    { en: 'University of North Carolina at Chapel Hill', zh: '北卡罗来纳大学教堂山分校' },
+    { en: 'University of Southern California', zh: '南加州大学' },
+    { en: 'University of California, San Diego', zh: '加州大学圣地亚哥分校' },
+    { en: 'New York University', zh: '纽约大学' },
+    { en: 'University of Florida', zh: '佛罗里达大学' },
+    { en: 'University of Texas at Austin', zh: '德克萨斯大学奥斯汀分校' },
+    { en: 'University of California, Davis', zh: '加州大学戴维斯分校' },
+    { en: 'University of California, Irvine', zh: '加州大学欧文分校' },
+    { en: 'University of Illinois Urbana-Champaign', zh: '伊利诺伊大学厄巴纳-香槟分校' },
+    { en: 'Boston College', zh: '波士顿学院' },
+    { en: 'Tufts University', zh: '塔夫茨大学' },
+    { en: 'University of California, Santa Barbara', zh: '加州大学圣塔芭芭拉分校' },
+    { en: 'Boston University', zh: '波士顿大学' },
+    { en: 'University of Wisconsin-Madison', zh: '威斯康星大学麦迪逊分校' },
+    { en: 'Ohio State University', zh: '俄亥俄州立大学' },
+    { en: 'Rutgers University, New Brunswick', zh: '罗格斯大学新布朗斯维克分校' },
+    { en: 'University of Washington', zh: '华盛顿大学' },
+    { en: 'Purdue University, West Lafayette', zh: '普渡大学西拉法叶分校' },
+    { en: 'University of Maryland, College Park', zh: '马里兰大学帕克分校' },
+    { en: 'University of Rochester', zh: '罗切斯特大学' },
+    { en: 'Georgia Institute of Technology', zh: '佐治亚理工学院' },
+    { en: 'Texas A&M University', zh: '德克萨斯A&M大学' },
+    { en: 'Virginia Tech', zh: '弗吉尼亚理工大学' },
+    { en: 'Wake Forest University', zh: '维克森林大学' },
+    { en: 'Brandeis University', zh: '布兰迪斯大学' },
+    { en: 'Northeastern University', zh: '东北大学' },
+    { en: 'Case Western Reserve University', zh: '凯斯西储大学' },
+    { en: 'Tulane University', zh: '杜兰大学' },
+    { en: 'University of Miami', zh: '迈阿密大学' },
+    { en: 'University of Pittsburgh', zh: '匹兹堡大学' },
+    { en: 'University of Georgia', zh: '佐治亚大学' },
+    { en: 'Michigan State University', zh: '密歇根州立大学' },
+    { en: 'Pennsylvania State University', zh: '宾夕法尼亚州立大学' },
+    { en: 'Syracuse University', zh: '雪城大学' },
+    { en: 'George Washington University', zh: '乔治华盛顿大学' },
+    { en: 'Pepperdine University', zh: '佩珀代因大学' },
+    { en: 'Lehigh University', zh: '理海大学' },
+    { en: 'Rensselaer Polytechnic Institute', zh: '伦斯勒理工学院' },
+    { en: 'Southern Methodist University', zh: '南卫理公会大学' },
+    { en: 'Worcester Polytechnic Institute', zh: '伍斯特理工学院' },
+    { en: 'Stevens Institute of Technology', zh: '史蒂文斯理工学院' },
+    { en: 'American University', zh: '美利坚大学' },
+    { en: 'Fordham University', zh: '福特汉姆大学' },
+    { en: 'Indiana University Bloomington', zh: '印第安纳大学伯明顿分校' },
+    { en: 'University of Colorado Boulder', zh: '科罗拉多大学博尔德分校' },
+    { en: 'Stony Brook University', zh: '石溪大学' },
+    { en: 'University at Buffalo, SUNY', zh: '纽约州立大学布法罗分校' },
+    { en: 'Binghamton University, SUNY', zh: '纽约州立大学宾汉姆顿分校' },
+    { en: 'University of Connecticut', zh: '康涅狄格大学' },
+    { en: 'University of Iowa', zh: '爱荷华大学' },
+    { en: 'University of Arizona', zh: '亚利桑那大学' },
+    { en: 'Arizona State University', zh: '亚利桑那州立大学' },
+    { en: 'University of Utah', zh: '犹他大学' },
+    { en: 'University of Oregon', zh: '俄勒冈大学' },
+    { en: 'University of Tennessee', zh: '田纳西大学' },
+    { en: 'University of Kentucky', zh: '肯塔基大学' },
+    { en: 'University of South Carolina', zh: '南卡罗来纳大学' },
+    { en: 'Florida State University', zh: '佛罗里达州立大学' },
+    { en: 'University of Delaware', zh: '特拉华大学' },
+    { en: 'University of Alabama', zh: '阿拉巴马大学' },
+    { en: 'Auburn University', zh: '奥本大学' },
+    { en: 'Clemson University', zh: '克莱姆森大学' },
+    { en: 'Baylor University', zh: '贝勒大学' },
+    { en: 'University of Houston', zh: '休斯顿大学' },
+    { en: 'Drexel University', zh: '德雷塞尔大学' },
+    { en: 'Illinois Institute of Technology', zh: '伊利诺伊理工学院' },
+    { en: 'Colorado School of Mines', zh: '科罗拉多矿业学院' },
+    { en: 'Santa Clara University', zh: '圣塔克拉拉大学' },
+    { en: 'University of Massachusetts Amherst', zh: '马萨诸塞大学阿默斯特分校' },
+    { en: 'North Carolina State University', zh: '北卡罗来纳州立大学' },
+    { en: 'Iowa State University', zh: '爱荷华州立大学' },
+    { en: 'Williams College', zh: '威廉姆斯学院' },
+    { en: 'Amherst College', zh: '阿默斯特学院' },
+    { en: 'Swarthmore College', zh: '斯沃斯莫尔学院' },
+    { en: 'Pomona College', zh: '波莫纳学院' },
+    { en: 'Wellesley College', zh: '韦尔斯利学院' },
+    { en: 'Middlebury College', zh: '明德学院' },
+    { en: 'Wesleyan University', zh: '卫斯理大学' },
+    { en: 'Vassar College', zh: '瓦萨学院' },
+    { en: 'Hamilton College', zh: '汉密尔顿学院' },
+    { en: 'Colgate University', zh: '科尔盖特大学' },
+    { en: 'College of William & Mary', zh: '威廉玛丽学院' }
+  ],
+  uk: [
+    /*UK*/
+    { en: 'University of Oxford', zh: '牛津大学' },
+    { en: 'University of Cambridge', zh: '剑桥大学' },
+    { en: 'Imperial College London', zh: '帝国理工学院' },
+    { en: 'London School of Economics and Political Science (LSE)', zh: '伦敦政治经济学院' },
+    { en: 'University College London (UCL)', zh: '伦敦大学学院' },
+    { en: "King's College London", zh: '伦敦国王学院' },
+    { en: 'University of Edinburgh', zh: '爱丁堡大学' },
+    { en: 'University of Manchester', zh: '曼彻斯特大学' },
+    { en: 'University of Bristol', zh: '布里斯托大学' },
+    { en: 'University of Warwick', zh: '华威大学' },
+    { en: 'University of Glasgow', zh: '格拉斯哥大学' },
+    { en: 'University of Birmingham', zh: '伯明翰大学' },
+    { en: 'University of Sheffield', zh: '谢菲尔德大学' },
+    { en: 'University of Leeds', zh: '利兹大学' },
+    { en: 'University of Nottingham', zh: '诺丁汉大学' },
+    { en: 'University of Southampton', zh: '南安普顿大学' },
+    { en: 'University of St Andrews', zh: '圣安德鲁斯大学' },
+    { en: 'Durham University', zh: '杜伦大学' },
+    { en: 'Newcastle University', zh: '纽卡斯尔大学' },
+    { en: 'University of Liverpool', zh: '利物浦大学' },
+    { en: 'Queen Mary University of London', zh: '伦敦玛丽女王大学' },
+    { en: 'University of York', zh: '约克大学' },
+    { en: 'Cardiff University', zh: '卡迪夫大学' },
+    { en: 'University of Exeter', zh: '埃克塞特大学' },
+    { en: 'University of Bath', zh: '巴斯大学' },
+    { en: 'University of Aberdeen', zh: '阿伯丁大学' },
+    { en: 'University of Reading', zh: '雷丁大学' },
+    { en: 'University of Leicester', zh: '莱斯特大学' },
+    { en: "Queen's University Belfast", zh: '贝尔法斯特女王大学' },
+    { en: 'University of Sussex', zh: '萨塞克斯大学' },
+    { en: 'University of Surrey', zh: '萨里大学' },
+    { en: 'Loughborough University', zh: '拉夫堡大学' },
+    { en: 'University of East Anglia (UEA)', zh: '东安格利亚大学' },
+    { en: 'University of Strathclyde', zh: '思克莱德大学' },
+    { en: 'Lancaster University', zh: '兰卡斯特大学' },
+    { en: 'University of Essex', zh: '埃塞克斯大学' },
+    { en: 'Royal Holloway, University of London', zh: '伦敦大学皇家霍洛威学院' },
+    { en: 'University of Dundee', zh: '邓迪大学' },
+    { en: 'Heriot-Watt University', zh: '赫瑞瓦特大学' },
+    { en: 'University of Kent', zh: '肯特大学' },
+    { en: 'Brunel University London', zh: '布鲁内尔大学' },
+    { en: 'Swansea University', zh: '斯旺西大学' },
+    { en: 'City, University of London', zh: '伦敦城市大学' },
+    { en: 'Birkbeck, University of London', zh: '伦敦大学伯贝克学院' },
+    { en: 'SOAS University of London', zh: '伦敦大学亚非学院' },
+    { en: 'University of Stirling', zh: '斯特灵大学' },
+    { en: 'Aston University', zh: '阿斯顿大学' },
+    { en: 'University of Hull', zh: '赫尔大学' },
+    { en: 'University of Portsmouth', zh: '朴茨茅斯大学' },
+    { en: 'University of Plymouth', zh: '普利茅斯大学' },
+    { en: 'Bournemouth University', zh: '伯恩茅斯大学' },
+    { en: 'Northumbria University', zh: '诺森比亚大学' },
+    { en: 'Nottingham Trent University', zh: '诺丁汉特伦特大学' },
+    { en: 'Manchester Metropolitan University', zh: '曼彻斯特城市大学' },
+    { en: 'Sheffield Hallam University', zh: '谢菲尔德哈勒姆大学' },
+    { en: 'Liverpool John Moores University', zh: '利物浦约翰摩尔斯大学' },
+    { en: 'University of the West of England (UWE Bristol)', zh: '西英格兰大学' },
+    { en: 'De Montfort University', zh: '德蒙福特大学' },
+    { en: 'Coventry University', zh: '考文垂大学' },
+    { en: 'University of Greenwich', zh: '格林威治大学' },
+    { en: 'Kingston University', zh: '金斯顿大学' },
+    { en: 'Middlesex University', zh: '密德萨斯大学' },
+    { en: 'University of Westminster', zh: '威斯敏斯特大学' },
+    { en: 'University of Hertfordshire', zh: '赫特福德大学' },
+    { en: 'University of Salford', zh: '索尔福德大学' },
+    { en: 'University of Bradford', zh: '布拉德福德大学' },
+    { en: 'University of Brighton', zh: '布莱顿大学' },
+    { en: 'University of Lincoln', zh: '林肯大学' },
+    { en: 'Teesside University', zh: '提赛德大学' },
+    { en: 'Ulster University', zh: '阿尔斯特大学' },
+    { en: 'Anglia Ruskin University', zh: '安格利亚鲁斯金大学' },
+    { en: 'University of Bedfordshire', zh: '贝德福德郡大学' },
+    { en: 'London Metropolitan University', zh: '伦敦都市大学' },
+    { en: 'University of East London', zh: '东伦敦大学' },
+    { en: 'University of the West of Scotland', zh: '西苏格兰大学' },
+    { en: 'Edinburgh Napier University', zh: '爱丁堡龙比亚大学' },
+    { en: 'Glasgow Caledonian University', zh: '格拉斯哥卡利多尼亚大学' },
+    { en: 'Robert Gordon University', zh: '罗伯特戈登大学' },
+    { en: 'University of Buckingham', zh: '白金汉大学' },
+    { en: "St George's, University of London", zh: '伦敦大学圣乔治学院' },
+    { en: "Goldsmiths, University of London", zh: '伦敦大学金史密斯学院' },
+    { en: 'London South Bank University', zh: '伦敦南岸大学' },
+    { en: 'University of Roehampton', zh: '罗汉普顿大学' },
+    { en: 'University of Northampton', zh: '北安普顿大学' },
+    { en: 'University of Chester', zh: '切斯特大学' },
+    { en: 'Edge Hill University', zh: '边山大学' },
+    { en: 'Bath Spa University', zh: '巴斯斯巴大学' },
+    { en: 'University of Gloucestershire', zh: '格洛斯特郡大学' },
+    { en: 'University of Winchester', zh: '温彻斯特大学' },
+    { en: 'Bangor University', zh: '班戈大学' },
+    { en: 'Aberystwyth University', zh: '亚伯大学' },
+    { en: 'University of South Wales', zh: '南威尔士大学' },
+    { en: 'Cardiff Metropolitan University', zh: '卡迪夫城市大学' },
+    { en: 'Queen Margaret University', zh: '玛格丽特女王大学' },
+    { en: 'University of the Arts London', zh: '伦敦艺术大学' },
+    { en: 'Royal College of Art', zh: '皇家艺术学院' },
+    { en: 'University of Central Lancashire', zh: '中央兰开夏大学' },
+    { en: 'University of Huddersfield', zh: '哈德斯菲尔德大学' },
+    { en: 'University of Derby', zh: '德比大学' },
+    { en: 'University of Sunderland', zh: '桑德兰大学' },
+    { en: 'University of Bolton', zh: '博尔顿大学' },
+    { en: 'University of Wolverhampton', zh: '伍尔弗汉普顿大学' },
+    { en: 'York St John University', zh: '约克圣约翰大学' },
+    { en: 'Liverpool Hope University', zh: '利物浦霍普大学' },
+    { en: 'Canterbury Christ Church University', zh: '坎特伯雷基督教会大学' },
+    { en: 'Leeds Beckett University', zh: '利兹贝克特大学' },
+    { en: 'University of the Highlands and Islands', zh: '高地和群岛大学' },
+    { en: 'Falmouth University', zh: '法尔茅斯大学' },
+    { en: 'Arts University Bournemouth', zh: '伯恩茅斯艺术大学' },
+    { en: 'Norwich University of the Arts', zh: '诺维奇艺术大学' },
+    { en: 'University for the Creative Arts', zh: '创意艺术大学' }
+  ],
+  sg: [
+    /*SG*/
+    { en: 'National University of Singapore (NUS)', zh: '新加坡国立大学' },
+    { en: 'Nanyang Technological University (NTU)', zh: '南洋理工大学' },
+    { en: 'Singapore Management University (SMU)', zh: '新加坡管理大学' },
+    { en: 'Singapore University of Technology and Design (SUTD)', zh: '新加坡科技设计大学' },
+    { en: 'Singapore Institute of Technology (SIT)', zh: '新加坡理工大学' },
+    { en: 'Singapore University of Social Sciences (SUSS)', zh: '新跃社科大学' },
+    { en: 'Yale-NUS College', zh: '耶鲁-新加坡国立大学学院' },
+    { en: 'Duke-NUS Medical School', zh: '杜克-新加坡国立大学医学院' },
+    { en: 'LASALLE College of the Arts', zh: '拉萨尔艺术学院' },
+    { en: 'Nanyang Academy of Fine Arts (NAFA)', zh: '南洋艺术学院' },
+    { en: 'James Cook University, Singapore', zh: '詹姆斯库克大学新加坡校区' },
+    { en: 'Curtin Singapore', zh: '科廷大学新加坡校区' }
+  ]
+};
+let currentRegion = 'us';
+try { const r = localStorage.getItem('us_apply_region'); if (REGIONS[r]) currentRegion = r; } catch (e) {}
+
+function defaultState() {
+  return {
+    us: { reach: [], match: [], safety: [] },
+    uk: { reach: [], match: [], safety: [] },
+    sg: { reach: [], match: [], safety: [] }
+  };
+}
+
+function normalize(d) {
+  const base = defaultState();
+  if (!d || typeof d !== 'object') return base;
+  // 旧格式迁移：顶层直接是 reach/match/safety（视为美国）
+  if (Array.isArray(d.reach) || Array.isArray(d.match) || Array.isArray(d.safety)) {
+    base.us.reach = d.reach || [];
+    base.us.match = d.match || [];
+    base.us.safety = d.safety || [];
+    return base;
+  }
+  Object.keys(base).forEach(r => {
+    if (d[r] && typeof d[r] === 'object') {
+      base[r].reach = d[r].reach || [];
+      base[r].match = d[r].match || [];
+      base[r].safety = d[r].safety || [];
+    }
+  });
+  return base;
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return normalize(JSON.parse(raw));
+  } catch (e) {}
+  return defaultState();
+}
+
+let state = load();
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function newSchool() {
+  return {
+    id: uid(),
+    name: '',
+    status: '未开始',
+    info: DEFAULT_INFO.map(i => ({ id: uid(), key: i.key, value: i.value }))
+  };
+}
+
+function newInfo() { return { id: uid(), key: '', value: '' }; }
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function board() { return state[currentRegion]; }
+
+function findSchool(cat, id) { return board()[cat].find(s => s.id === id); }
+
+function schoolHTML(cat, s) {
+  const info = s.info.map(i =>
+    '<div class="info-item" data-info-id="' + i.id + '">' +
+      '<input class="info-key" data-field="info-key" placeholder="项目" value="' + escapeAttr(i.key) + '">' +
+      '<input class="info-value" data-field="info-value" placeholder="内容" value="' + escapeAttr(i.value) + '">' +
+      '<button class="icon-btn" data-action="del-info" title="删除信息">✕</button>' +
+    '</div>'
+  ).join('');
+
+  const statusSel = STATUS_OPTIONS.map(o =>
+    '<option value="' + o + '"' + (o === s.status ? ' selected' : '') + '>' + o + '</option>'
+  ).join('');
+
+  const moveSel = '<option value="">移动…</option>' + CATEGORIES.filter(c => c !== cat).map(c =>
+    '<option value="' + c + '">' + CATEGORY_LABELS[c] + '</option>'
+  ).join('');
+
+  return '<div class="school-card" draggable="true" data-school-id="' + s.id + '">' +
+    '<div class="school-head">' +
+      '<span class="drag-handle" title="拖拽排序">⠿</span>' +
+      '<input class="school-name" data-field="name" value="' + escapeAttr(s.name) + '" placeholder="学校名称（点击搜索院校）">' +
+      '<button class="icon-btn" data-action="pick-school" title="搜索选择院校">🔍</button>' +
+      '<button class="icon-btn" data-action="del-school" title="删除学校">🗑</button>' +
+    '</div>' +
+    '<div class="school-meta">' +
+      '<label>申请状态</label>' +
+      '<select class="status" data-field="status">' +
+        '<option value="">— 未设置 —</option>' + statusSel +
+      '</select>' +
+      '<select class="move-select" data-action="move">' + moveSel + '</select>' +
+    '</div>' +
+    '<div class="info-list">' + info + '</div>' +
+    '<button class="add-info" data-action="add-info">＋ 添加信息</button>' +
+  '</div>';
+}
+
+function renderStats() {
+  const b = board();
+  const total = CATEGORIES.reduce((n, c) => n + b[c].length, 0);
+  const submitted = CATEGORIES.reduce((n, c) => n + b[c].filter(s => ['已提交', '面试中', '已录取'].includes(s.status)).length, 0);
+  document.getElementById('stats').innerHTML =
+    '<div class="stat region">' + REGION_FLAGS[currentRegion] + ' ' + REGIONS[currentRegion] + '</div>' +
+    '<div class="stat"><b>' + total + '</b> 所学校</div>' +
+    '<div class="stat"><b>' + b.reach.length + '</b> 冲刺</div>' +
+    '<div class="stat"><b>' + b.match.length + '</b> 稳妥</div>' +
+    '<div class="stat"><b>' + b.safety.length + '</b> 保底</div>' +
+    '<div class="stat"><b>' + submitted + '</b> 已提交/录取</div>';
+}
+
+function render() {
+  const b = board();
+  CATEGORIES.forEach(cat => {
+    const list = document.getElementById('schools-' + cat);
+    document.getElementById('count-' + cat).textContent = b[cat].length + ' 所';
+    list.innerHTML = b[cat].length === 0
+      ? '<div class="empty">还没有学校，点击下方「添加学校」</div>'
+      : b[cat].map(s => schoolHTML(cat, s)).join('');
+  });
+  renderStats();
+}
+function addSchool(cat) { board()[cat].push(newSchool()); save(); render(); }
+
+function deleteSchool(cat, id) {
+  const s = findSchool(cat, id);
+  if (!confirm('确定删除「' + (s ? s.name : '') + '」吗？')) return;
+  board()[cat] = board()[cat].filter(x => x.id !== id);
+  save(); render();
+}
+
+function addInfo(cat, schoolId) {
+  const s = findSchool(cat, schoolId);
+  if (!s) return;
+  s.info.push(newInfo());
+  save(); render();
+}
+
+function deleteInfo(cat, schoolId, infoId) {
+  const s = findSchool(cat, schoolId);
+  if (!s) return;
+  s.info = s.info.filter(i => i.id !== infoId);
+  save(); render();
+}
+
+function moveSchool(from, id, to) {
+  if (!CATEGORIES.includes(to) || from === to) return;
+  const b = board();
+  const idx = b[from].findIndex(s => s.id === id);
+  if (idx === -1) return;
+  const [school] = b[from].splice(idx, 1);
+  b[to].push(school);
+  save(); render();
+}
+
+// 点击：增删学校 / 增删信息
+document.addEventListener('click', e => {
+  const addBtn = e.target.closest('[data-add]');
+  if (addBtn) { addSchool(addBtn.dataset.add); return; }
+
+  const card = e.target.closest('.school-card');
+  if (!card) return;
+  const actionEl = e.target.closest('[data-action]');
+  if (!actionEl) return;
+
+  const cat = card.closest('.column').dataset.category;
+  const schoolId = card.dataset.schoolId;
+  const action = actionEl.dataset.action;
+
+  if (action === 'del-school') deleteSchool(cat, schoolId);
+  else if (action === 'pick-school') openPicker(card.querySelector('.school-name'));
+  else if (action === 'add-info') addInfo(cat, schoolId);
+  else if (action === 'del-info') {
+    const item = actionEl.closest('.info-item');
+    deleteInfo(cat, schoolId, item.dataset.infoId);
+  }
+});
+
+// 输入：实时修改校名 / 状态 / 信息
+document.addEventListener('input', e => {
+  const el = e.target;
+  const field = el.dataset.field;
+  if (!field) return;
+  const card = el.closest('.school-card');
+  if (!card) return;
+  const cat = card.closest('.column').dataset.category;
+  const school = findSchool(cat, card.dataset.schoolId);
+  if (!school) return;
+
+  if (field === 'name') school.name = el.value;
+  else if (field === 'status') school.status = el.value;
+  else if (field === 'info-key' || field === 'info-value') {
+    const item = el.closest('.info-item');
+    const info = school.info.find(i => i.id === item.dataset.infoId);
+    if (info) { if (field === 'info-key') info.key = el.value; else info.value = el.value; }
+  }
+  save();
+  renderStats();
+});
+
+// 跨块移动
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.action === 'move') {
+    const card = el.closest('.school-card');
+    moveSchool(card.closest('.column').dataset.category, card.dataset.schoolId, el.value);
+  }
+});
+
+// 拖拽排序 / 跨块移动
+let dragData = null;
+document.addEventListener('dragstart', e => {
+  const card = e.target.closest('.school-card');
+  if (!card) return;
+  dragData = { cat: card.closest('.column').dataset.category, id: card.dataset.schoolId };
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', card.dataset.schoolId); } catch (err) {}
+});
+document.addEventListener('dragend', () => {
+  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragData = null;
+});
+document.addEventListener('dragover', e => {
+  if (!dragData) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const targetCard = e.target.closest('.school-card');
+  if (targetCard) targetCard.classList.add('drag-over');
+  else {
+    const col = e.target.closest('.column');
+    if (col) col.querySelector('.schools').classList.add('drag-over');
+  }
+});
+document.addEventListener('drop', e => {
+  if (!dragData) return;
+  e.preventDefault();
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const { cat, id } = dragData;
+  dragData = null;
+
+  const srcIdx = board()[cat].findIndex(s => s.id === id);
+  if (srcIdx === -1) return;
+
+  const targetCard = e.target.closest('.school-card');
+  let targetCat, targetIndex;
+  if (targetCard) {
+    targetCat = targetCard.closest('.column').dataset.category;
+    targetIndex = board()[targetCat].findIndex(s => s.id === targetCard.dataset.schoolId);
+  } else {
+    const col = e.target.closest('.column');
+    if (!col) return;
+    targetCat = col.dataset.category;
+    targetIndex = board()[targetCat].length;
+  }
+
+  const [school] = board()[cat].splice(srcIdx, 1);
+  if (cat === targetCat && srcIdx < targetIndex) targetIndex--;
+  board()[targetCat].splice(targetIndex, 0, school);
+  save();
+  render();
+});
+
+// 导出 / 导入 / 清空
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '留学申请记录.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      state = normalize(d);
+      save();
+      render();
+      alert('导入成功');
+    } catch (err) {
+      alert('导入失败：文件格式不正确');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('确定要清空全部记录吗？此操作不可恢复。')) return;
+  state = defaultState();
+  save();
+  render();
+});
+
+// ===== 院校搜索选择框 =====
+function initPicker() {
+  const p = document.createElement('div');
+  p.className = 'uni-picker';
+  p.innerHTML =
+    '<div class="uni-picker-tabs">' +
+      '<button data-region="us">🇺🇸 美国</button>' +
+      '<button data-region="uk">🇬🇧 英国</button>' +
+      '<button data-region="sg">🇸🇬 新加坡</button>' +
+    '</div>' +
+    '<div class="uni-picker-search">' +
+      '<input type="text" placeholder="搜索院校名称（中文 / 英文）">' +
+      '<button class="uni-picker-close" title="关闭">✕</button>' +
+    '</div>' +
+    '<div class="uni-picker-list"></div>';
+  document.body.appendChild(p);
+  return p;
+}
+
+const picker = initPicker();
+const pickerSearch = picker.querySelector('.uni-picker-search input');
+let pickerTarget = null;
+
+function renderUniList(q) {
+  const list = picker.querySelector('.uni-picker-list');
+  const schools = SCHOOLS[currentRegion] || [];
+  const query = (q || '').trim().toLowerCase();
+  const items = schools.filter(s =>
+    !query || s.en.toLowerCase().includes(query) || s.zh.includes(query)
+  );
+  if (!items.length) {
+    list.innerHTML = '<div class="uni-picker-empty">没有匹配的院校，换个关键词试试</div>';
+    return;
+  }
+  list.innerHTML = items.map(s =>
+    '<div class="uni-item" data-en="' + escapeAttr(s.en) + '" data-zh="' + escapeAttr(s.zh) + '">' +
+      '<span class="uni-name">' + s.zh + '</span>' +
+      '<span class="uni-zh">' + s.en + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function openPicker(input) {
+  pickerTarget = input;
+  const rect = input.getBoundingClientRect();
+  picker.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+  picker.style.left = (rect.left + window.scrollX) + 'px';
+  picker.style.width = Math.max(340, rect.width) + 'px';
+  picker.classList.add('open');
+  pickerSearch.value = '';
+  renderUniList('');
+  setTimeout(() => pickerSearch.focus(), 0);
+}
+
+function closePicker() {
+  picker.classList.remove('open');
+  pickerTarget = null;
+}
+
+function setRegion(r) {
+  if (!REGIONS[r]) return;
+  currentRegion = r;
+  try { localStorage.setItem('us_apply_region', r); } catch (e) {}
+  document.querySelectorAll('[data-region]').forEach(b => {
+    b.classList.toggle('active', b.dataset.region === r);
+  });
+  render();
+  if (picker.classList.contains('open')) renderUniList(pickerSearch.value);
+}
+
+pickerSearch.addEventListener('input', () => renderUniList(pickerSearch.value.trim().toLowerCase()));
+
+picker.querySelector('.uni-picker-close').addEventListener('click', closePicker);
+
+picker.querySelector('.uni-picker-list').addEventListener('click', e => {
+  const item = e.target.closest('.uni-item');
+  if (!item || !pickerTarget) return;
+  pickerTarget.value = item.dataset.zh;
+  pickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  closePicker();
+  pickerTarget.focus();
+});
+
+// 点击空的校名输入框时，自动弹出院校选择框
+document.addEventListener('focusin', e => {
+  if (e.target.dataset && e.target.dataset.field === 'name' && !e.target.value.trim()) {
+    openPicker(e.target);
+  }
+});
+
+// 地区切换
+document.addEventListener('click', e => {
+  const rb = e.target.closest('[data-region]');
+  if (rb) { setRegion(rb.dataset.region); return; }
+});
+
+// 点击选择框外部时关闭
+document.addEventListener('click', e => {
+  if (!picker.classList.contains('open')) return;
+  if (picker.contains(e.target)) return;
+  const nameInput = e.target.closest && e.target.closest('[data-field="name"]');
+  const pickBtn = e.target.closest && e.target.closest('[data-action="pick-school"]');
+  if (nameInput || pickBtn) return;
+  closePicker();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePicker();
+});
+
+setRegion(currentRegion);
+
+render();
+</script>
+</body>
+</html>
