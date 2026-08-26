@@ -430,6 +430,10 @@ function load() {
 
 let state = defaultState();
 
+function hasSchools(d) {
+  return Object.keys(REGIONS).some(r => CATEGORIES.some(cat => d[r][cat].length > 0));
+}
+
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
 // ===== Supabase 云端同步（填好下面两项即可开启多人实时共享）=====
@@ -585,7 +589,22 @@ async function init() {
     if (window.supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     if (supabase) {
       const { data, error } = await supabase.from('schools').select('*').order('position');
-      if (!error && data) { applyRows(data); setSyncStatus('已连接，多人共享', 'online'); }
+      if (!error && data) {
+        if (data.length) {
+          applyRows(data);
+          setSyncStatus('已连接，多人共享', 'online');
+        } else {
+          const localState = load();
+          state = localState;
+          if (hasSchools(localState)) {
+            setSyncStatus('正在迁移本机数据…', 'syncing');
+            await replaceAllFromState();
+            setSyncStatus('本机数据已迁移到云端', 'online');
+          } else {
+            setSyncStatus('已连接，多人共享', 'online');
+          }
+        }
+      }
       else { state = load(); setSyncStatus('云端连接失败', 'error'); }
     } else {
       state = load();
