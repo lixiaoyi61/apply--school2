@@ -98,6 +98,7 @@ select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6p
     </div>
     <div class="toolbar">
       <span class="sync-status" id="syncStatus">本机保存</span>
+      <button id="saveBtn">💾 立即保存</button>
       <button id="exportBtn">⬇️ 导出数据</button>
       <button id="importBtn">⬆️ 导入数据</button>
       <button id="resetBtn" class="danger">🗑️ 清空全部</button>
@@ -444,13 +445,30 @@ function setSyncStatus(text, type) {
 }
 
 function loadSupabaseLib() {
+  const sources = [
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'
+  ];
   return new Promise(resolve => {
-    if (window.supabase) return resolve();
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    s.onload = () => resolve();
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
+    if (window.supabase) return resolve(true);
+    const trySource = index => {
+      if (index >= sources.length) return resolve(false);
+      const s = document.createElement('script');
+      let finished = false;
+      const done = ok => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        if (ok && window.supabase) resolve(true);
+        else { s.remove(); trySource(index + 1); }
+      };
+      const timer = setTimeout(() => done(false), 8000);
+      s.src = sources[index];
+      s.onload = () => done(true);
+      s.onerror = () => done(false);
+      document.head.appendChild(s);
+    };
+    trySource(0);
   });
 }
 
@@ -461,7 +479,10 @@ function sbRow(s, region, cat, pos) {
 function sbUpsert(s, region, cat) {
   if (!supabase) return;
   const pos = state[region][cat].indexOf(s);
-  supabase.from('schools').upsert(sbRow(s, region, cat, pos));
+  setSyncStatus('正在保存…', 'syncing');
+  supabase.from('schools').upsert(sbRow(s, region, cat, pos)).then(({ error }) => {
+    setSyncStatus(error ? '云端保存失败' : '已保存到云端', error ? 'error' : 'online');
+  });
 }
 
 let sbTimers = {};
@@ -488,7 +509,10 @@ async function persistRegion(region) {
   CATEGORIES.forEach(cat => {
     state[region][cat].forEach((s, idx) => rows.push(sbRow(s, region, cat, idx)));
   });
-  await supabase.from('schools').upsert(rows);
+  if (!rows.length) return;
+  setSyncStatus('正在保存…', 'syncing');
+  const { error } = await supabase.from('schools').upsert(rows);
+  setSyncStatus(error ? '云端保存失败' : '已保存到云端', error ? 'error' : 'online');
 }
 
 function applyRows(rows) {
@@ -504,13 +528,13 @@ function applyRows(rows) {
 
 async function refreshFromServer() {
   if (!supabase) return;
+  const active = document.activeElement;
+  if (active && active.closest && active.closest('.school-card')) return;
   const { data, error } = await supabase.from('schools').select('*').order('position');
   if (error || !data) { setSyncStatus('云端连接失败', 'error'); return; }
   applyRows(data);
   setSyncStatus('已保存到云端', 'online');
-  const ae = document.activeElement;
-  const typing = ae && ae.closest && ae.closest('.school-card');
-  if (!typing) render();
+  render();
 }
 
 function subscribeRealtime() {
@@ -530,6 +554,27 @@ async function replaceAllFromState() {
     });
   });
   await supabase.from('schools').upsert(rows);
+}
+
+async function saveAllNow() {
+  save();
+  if (!supabase) {
+    setSyncStatus('仅保存到本机', 'error');
+    alert('数据已保存到当前浏览器，但云端没有连接成功。请检查网络后刷新页面。');
+    return;
+  }
+  setSyncStatus('正在保存…', 'syncing');
+  const rows = [];
+  Object.keys(REGIONS).forEach(r => CATEGORIES.forEach(cat => {
+    state[r][cat].forEach((s, idx) => rows.push(sbRow(s, r, cat, idx)));
+  }));
+  if (!rows.length) {
+    setSyncStatus('没有需要保存的数据', 'online');
+    return;
+  }
+  const { error } = await supabase.from('schools').upsert(rows);
+  setSyncStatus(error ? '云端保存失败' : '已保存到云端', error ? 'error' : 'online');
+  alert(error ? '云端保存失败：' + error.message : '保存成功，数据已写入云端。');
 }
 
 async function init() {
@@ -792,6 +837,8 @@ document.addEventListener('drop', e => {
 });
 
 // 导出 / 导入 / 清空
+document.getElementById('saveBtn').addEventListener('click', saveAllNow);
+
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
