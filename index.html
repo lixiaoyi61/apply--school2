@@ -448,32 +448,40 @@ function setSyncStatus(text, type) {
   el.className = 'sync-status' + (type ? ' ' + type : '');
 }
 
-function loadSupabaseLib() {
-  const sources = [
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'
-  ];
-  return new Promise(resolve => {
-    if (window.supabase) return resolve(true);
-    const trySource = index => {
-      if (index >= sources.length) return resolve(false);
-      const s = document.createElement('script');
-      let finished = false;
-      const done = ok => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        if (ok && window.supabase) resolve(true);
-        else { s.remove(); trySource(index + 1); }
-      };
-      const timer = setTimeout(() => done(false), 8000);
-      s.src = sources[index];
-      s.onload = () => done(true);
-      s.onerror = () => done(false);
-      document.head.appendChild(s);
-    };
-    trySource(0);
-  });
+async function cloudRequest(method, query, body) {
+  try {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/schools' + (query || ''), {
+      method,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        Prefer: method === 'POST' ? 'resolution=merge-duplicates,return=representation' : 'return=representation'
+      },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) return { data: null, error: data || { message: 'HTTP ' + response.status } };
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: { message: error.message || '网络连接失败' } };
+  }
+}
+
+function createRestClient() {
+  return {
+    from: () => ({
+      select: columns => ({
+        order: column => cloudRequest('GET', '?select=' + encodeURIComponent(columns) + '&order=' + encodeURIComponent(column) + '.asc')
+      }),
+      upsert: rows => cloudRequest('POST', '', rows),
+      delete: () => ({
+        eq: (column, value) => cloudRequest('DELETE', '?' + encodeURIComponent(column) + '=eq.' + encodeURIComponent(value)),
+        neq: (column, value) => cloudRequest('DELETE', '?' + encodeURIComponent(column) + '=neq.' + encodeURIComponent(value))
+      })
+    })
+  };
 }
 
 function sbRow(s, region, cat, pos) {
@@ -543,9 +551,11 @@ async function refreshFromServer() {
 
 function subscribeRealtime() {
   if (!supabase) return;
-  supabase.channel('schools-rt')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => refreshFromServer())
-    .subscribe();
+  // 不依赖第三方 CDN/WebSocket；每 5 秒拉取一次，兼容受限网络和多设备协作。
+  setInterval(() => {
+    if (document.visibilityState === 'visible') refreshFromServer();
+  }, 5000);
+  window.addEventListener('focus', refreshFromServer);
 }
 
 async function replaceAllFromState() {
@@ -585,8 +595,7 @@ async function init() {
   setRegion(currentRegion);
   if (SUPABASE_ON) {
     setSyncStatus('正在连接云端…', 'syncing');
-    await loadSupabaseLib();
-    if (window.supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = createRestClient();
     if (supabase) {
       const { data, error } = await supabase.from('schools').select('*').order('position');
       if (!error && data) {
