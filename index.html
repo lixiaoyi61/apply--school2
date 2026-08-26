@@ -80,6 +80,9 @@ select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6p
 .region-switch{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px}
 .region-switch button{border:none;background:transparent;padding:6px 14px;border-radius:7px;font-size:13px;color:var(--muted);cursor:pointer}
 .region-switch button.active{background:#111827;color:#fff}
+.sync-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:8px}
+.sync-status::before{content:'';width:8px;height:8px;border-radius:50%;background:#9ca3af}
+.sync-status.online::before{background:#16a34a}.sync-status.syncing::before{background:#f59e0b}.sync-status.error::before{background:#dc2626}
 </style>
 </head>
 <body>
@@ -94,6 +97,7 @@ select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6p
       </div>
     </div>
     <div class="toolbar">
+      <span class="sync-status" id="syncStatus">本机保存</span>
       <button id="exportBtn">⬇️ 导出数据</button>
       <button id="importBtn">⬆️ 导入数据</button>
       <button id="resetBtn" class="danger">🗑️ 清空全部</button>
@@ -128,6 +132,7 @@ select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6p
   </main>
 </div>
 <input type="file" id="fileInput" accept="application/json" hidden>
+<script src="config.js"></script>
 <script>
 const CATEGORIES = ['reach', 'match', 'safety'];
 const CATEGORY_LABELS = { reach: '冲刺', match: '稳妥', safety: '保底' };
@@ -422,9 +427,132 @@ function load() {
   return defaultState();
 }
 
-let state = load();
+let state = defaultState();
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ===== Supabase 云端同步（填好下面两项即可开启多人实时共享）=====
+const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.supabaseUrl) || '';
+const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.supabaseAnonKey) || '';
+const SUPABASE_ON = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+let supabase = null;
+
+function setSyncStatus(text, type) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = text;
+  el.className = 'sync-status' + (type ? ' ' + type : '');
+}
+
+function loadSupabaseLib() {
+  return new Promise(resolve => {
+    if (window.supabase) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
+
+function sbRow(s, region, cat, pos) {
+  return { id: s.id, region: region, category: cat, name: s.name, status: s.status, info: s.info, position: pos };
+}
+
+function sbUpsert(s, region, cat) {
+  if (!supabase) return;
+  const pos = state[region][cat].indexOf(s);
+  supabase.from('schools').upsert(sbRow(s, region, cat, pos));
+}
+
+let sbTimers = {};
+function scheduleUpsert(s, region, cat) {
+  if (!supabase) return;
+  clearTimeout(sbTimers[s.id]);
+  setSyncStatus('正在保存…', 'syncing');
+  sbTimers[s.id] = setTimeout(() => {
+    const pos = state[region][cat].indexOf(s);
+    supabase.from('schools').upsert(sbRow(s, region, cat, pos)).then(({ error }) => {
+      setSyncStatus(error ? '云端保存失败' : '已保存到云端', error ? 'error' : 'online');
+    });
+  }, 400);
+}
+
+async function sbDelete(id) {
+  if (!supabase) return;
+  await supabase.from('schools').delete().eq('id', id);
+}
+
+async function persistRegion(region) {
+  if (!supabase) return;
+  const rows = [];
+  CATEGORIES.forEach(cat => {
+    state[region][cat].forEach((s, idx) => rows.push(sbRow(s, region, cat, idx)));
+  });
+  await supabase.from('schools').upsert(rows);
+}
+
+function applyRows(rows) {
+  const next = defaultState();
+  (rows || []).forEach(r => {
+    if (next[r.region] && next[r.region][r.category]) {
+      next[r.region][r.category].push({ id: r.id, name: r.name, status: r.status, info: r.info || [] });
+    }
+  });
+  state = next;
+  save();
+}
+
+async function refreshFromServer() {
+  if (!supabase) return;
+  const { data, error } = await supabase.from('schools').select('*').order('position');
+  if (error || !data) { setSyncStatus('云端连接失败', 'error'); return; }
+  applyRows(data);
+  setSyncStatus('已保存到云端', 'online');
+  const ae = document.activeElement;
+  const typing = ae && ae.closest && ae.closest('.school-card');
+  if (!typing) render();
+}
+
+function subscribeRealtime() {
+  if (!supabase) return;
+  supabase.channel('schools-rt')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => refreshFromServer())
+    .subscribe();
+}
+
+async function replaceAllFromState() {
+  if (!supabase) return;
+  await supabase.from('schools').delete().neq('id', '');
+  const rows = [];
+  Object.keys(REGIONS).forEach(r => {
+    CATEGORIES.forEach(cat => {
+      state[r][cat].forEach((s, idx) => rows.push(sbRow(s, r, cat, idx)));
+    });
+  });
+  await supabase.from('schools').upsert(rows);
+}
+
+async function init() {
+  setRegion(currentRegion);
+  if (SUPABASE_ON) {
+    setSyncStatus('正在连接云端…', 'syncing');
+    await loadSupabaseLib();
+    if (window.supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (supabase) {
+      const { data, error } = await supabase.from('schools').select('*').order('position');
+      if (!error && data) { applyRows(data); setSyncStatus('已连接，多人共享', 'online'); }
+      else { state = load(); setSyncStatus('云端连接失败', 'error'); }
+    } else {
+      state = load();
+      setSyncStatus('云端组件加载失败', 'error');
+    }
+  } else {
+    state = load();
+    setSyncStatus('本机保存（未配置云端）', '');
+  }
+  render();
+  if (supabase) subscribeRealtime();
+}
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -507,13 +635,21 @@ function render() {
   });
   renderStats();
 }
-function addSchool(cat) { board()[cat].push(newSchool()); save(); render(); }
+function addSchool(cat) {
+  const s = newSchool();
+  board()[cat].push(s);
+  save();
+  render();
+  persistRegion(currentRegion);
+}
 
 function deleteSchool(cat, id) {
   const s = findSchool(cat, id);
   if (!confirm('确定删除「' + (s ? s.name : '') + '」吗？')) return;
   board()[cat] = board()[cat].filter(x => x.id !== id);
   save(); render();
+  sbDelete(id);
+  persistRegion(currentRegion);
 }
 
 function addInfo(cat, schoolId) {
@@ -521,6 +657,7 @@ function addInfo(cat, schoolId) {
   if (!s) return;
   s.info.push(newInfo());
   save(); render();
+  sbUpsert(s, currentRegion, cat);
 }
 
 function deleteInfo(cat, schoolId, infoId) {
@@ -528,6 +665,7 @@ function deleteInfo(cat, schoolId, infoId) {
   if (!s) return;
   s.info = s.info.filter(i => i.id !== infoId);
   save(); render();
+  sbUpsert(s, currentRegion, cat);
 }
 
 function moveSchool(from, id, to) {
@@ -538,6 +676,7 @@ function moveSchool(from, id, to) {
   const [school] = b[from].splice(idx, 1);
   b[to].push(school);
   save(); render();
+  persistRegion(currentRegion);
 }
 
 // 点击：增删学校 / 增删信息
@@ -582,6 +721,7 @@ document.addEventListener('input', e => {
     if (info) { if (field === 'info-key') info.key = el.value; else info.value = el.value; }
   }
   save();
+  scheduleUpsert(school, currentRegion, cat);
   renderStats();
 });
 
@@ -648,6 +788,7 @@ document.addEventListener('drop', e => {
   board()[targetCat].splice(targetIndex, 0, school);
   save();
   render();
+  persistRegion(currentRegion);
 });
 
 // 导出 / 导入 / 清空
@@ -673,6 +814,7 @@ document.getElementById('fileInput').addEventListener('change', e => {
       state = normalize(d);
       save();
       render();
+      replaceAllFromState();
       alert('导入成功');
     } catch (err) {
       alert('导入失败：文件格式不正确');
@@ -687,6 +829,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   state = defaultState();
   save();
   render();
+  replaceAllFromState();
 });
 
 // ===== 院校搜索选择框 =====
@@ -799,9 +942,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePicker();
 });
 
-setRegion(currentRegion);
-
-render();
+init();
 </script>
 </body>
 </html>
