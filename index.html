@@ -99,7 +99,8 @@ select.status{flex:1;border:1px solid var(--border);border-radius:8px;padding:6p
     <div class="toolbar">
       <span class="sync-status" id="syncStatus">本机保存</span>
       <button id="saveBtn">💾 立即保存</button>
-      <button id="exportBtn">⬇️ 导出数据</button>
+      <button id="exportBtn">⬇️ 导出 Word</button>
+      <button id="backupBtn">📦 备份 JSON</button>
       <button id="importBtn">⬆️ 导入数据</button>
       <button id="resetBtn" class="danger">🗑️ 清空全部</button>
     </div>
@@ -867,12 +868,63 @@ document.addEventListener('drop', e => {
 // 导出 / 导入 / 清空
 document.getElementById('saveBtn').addEventListener('click', saveAllNow);
 
+function downloadBlob(content, type, filename) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function wordEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
 document.getElementById('exportBtn').addEventListener('click', () => {
+  const sections = Object.keys(REGIONS).map(region => {
+    const categoryTables = CATEGORIES.map(cat => {
+      const rows = state[region][cat];
+      if (!rows.length) return '';
+      const body = rows.map((school, index) => {
+        const details = (school.info || [])
+          .filter(item => item.key || item.value)
+          .map(item => '<div><b>' + wordEscape(item.key || '信息') + '：</b>' + wordEscape(item.value) + '</div>')
+          .join('');
+        return '<tr><td>' + (index + 1) + '</td><td>' + wordEscape(school.name || '未填写') +
+          '</td><td>' + wordEscape(school.status || '未开始') + '</td><td>' + (details || '—') + '</td></tr>';
+      }).join('');
+      return '<h2>' + wordEscape(CATEGORY_LABELS[cat]) + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1) +
+        '</h2><table><thead><tr><th>序号</th><th>学校</th><th>状态</th><th>申请信息</th></tr></thead><tbody>' + body + '</tbody></table>';
+    }).join('');
+    return categoryTables ? '<h1>' + REGION_FLAGS[region] + ' ' + wordEscape(REGIONS[region]) + '</h1>' + categoryTables : '';
+  }).join('');
+
+  const exportedAt = new Date().toLocaleString('zh-CN');
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    '@page{margin:2cm}body{font-family:"Microsoft YaHei",Arial,sans-serif;color:#1f2937;font-size:11pt}' +
+    'h1{color:#111827;font-size:20pt;border-bottom:2px solid #4f46e5;padding-bottom:6pt;margin-top:22pt}' +
+    'h1.title{font-size:24pt;border:0;margin:0 0 4pt}p.meta{color:#6b7280;margin:0 0 18pt}' +
+    'h2{font-size:14pt;color:#3730a3;margin:16pt 0 6pt}table{border-collapse:collapse;width:100%;margin-bottom:14pt}' +
+    'th{background:#eef2ff;font-weight:bold}th,td{border:1px solid #cbd5e1;padding:7pt;vertical-align:top}' +
+    'th:first-child,td:first-child{width:7%;text-align:center}th:nth-child(2){width:25%}th:nth-child(3){width:13%}' +
+    'td div{margin-bottom:3pt}</style></head><body>' +
+    '<h1 class="title">留学申请记录</h1><p class="meta">导出时间：' + wordEscape(exportedAt) + '</p>' +
+    (sections || '<p>暂无申请记录。</p>') + '</body></html>';
+  downloadBlob('\ufeff' + html, 'application/msword;charset=utf-8', '留学申请记录.doc');
+});
+
+document.getElementById('backupBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = '留学申请记录.json';
+  a.download = '留学申请记录备份.json';
   a.click();
   URL.revokeObjectURL(url);
 });
